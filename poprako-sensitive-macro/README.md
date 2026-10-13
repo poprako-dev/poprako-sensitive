@@ -15,5 +15,4 @@ when the consuming crate has debug assertions disabled. With debug assertions
 enabled, the original value is formatted. The generated implementations select
 these configurations with `#[cfg]`.
 
-Rust 1.95 or newer is required. Publication is pending; this package is not yet
-released to crates.io. Licensed under MIT; see [LICENSE](LICENSE).
+Rust 1.95 or newer is required. Licensed under MIT; see [LICENSE](LICENSE).

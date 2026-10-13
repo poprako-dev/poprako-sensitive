@@ -14,5 +14,5 @@ contains the derive macros. Keep both packages independently packageable.
 - Every commit must pass `sh scripts/ci-local.sh` through the pre-commit hook;
   never bypass hooks. Install it with `git config core.hooksPath scripts/githooks`.
 - CI runs checked-in POSIX shell scripts directly.
-- Publication is paused. Do not publish to crates.io or add automatic publishing
-  until the user explicitly authorizes it.
+- Publishing to crates.io requires explicit user authorization and a successful
+  dry run. Publish the macro package before the main package.
