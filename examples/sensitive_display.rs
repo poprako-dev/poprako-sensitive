@@ -1,22 +1,31 @@
 //! Custom Display redaction and the empty-path default.
 
-#[cfg(not(debug_assertions))]
-use core::fmt::{Formatter, Result};
+use core::fmt::{Display, Formatter, Result};
 
 use poprako_sensitive::SensitiveDisplay;
 
-// Only the redacted implementation references this callback.
+struct Email {
+    local: String,
+    domain: String,
+}
+
+impl Display for Email {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> Result {
+        write!(formatter, "{}@{}", self.local, self.domain)
+    }
+}
+
+// The callback receives the original Email, not its Display output.
 #[cfg(not(debug_assertions))]
-fn mask_email(email: &&str, formatter: &mut Formatter<'_>) -> Result {
-    let domain = email.split_once('@').map_or("hidden", |(_, domain)| domain);
-    write!(formatter, "***@{domain}")
+fn mask_email(email: &Email, formatter: &mut Formatter<'_>) -> Result {
+    write!(formatter, "***@{}", email.domain)
 }
 
 #[derive(SensitiveDisplay)]
 struct Contact<'a> {
     name: &'a str,
     #[sensitive(display = "mask_email")]
-    email: &'a str,
+    email: Email,
     #[sensitive(display = "")]
     recovery_code: &'a str,
 }
@@ -29,10 +38,16 @@ struct Contact<'a> {
 fn main() {
     let contact = Contact {
         name: "Reader",
-        email: "reader@example.com",
+        email: Email {
+            local: "reader".into(),
+            domain: "example.com".into(),
+        },
         recovery_code: "example-recovery-code",
     };
+
     println!("debug_assertions = {}", cfg!(debug_assertions));
     println!("{contact}");
-    assert_eq!(contact.email, "reader@example.com");
+
+    assert_eq!(contact.email.local, "reader");
+    assert_eq!(contact.email.domain, "example.com");
 }

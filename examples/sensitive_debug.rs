@@ -19,8 +19,10 @@ fn main() {
         user_id: "user-42",
         password: "example-password",
     };
+
     println!("debug_assertions = {}", cfg!(debug_assertions));
     println!("{login:?}");
     println!("{login:#?}");
+
     assert_eq!(login.password, "example-password");
 }

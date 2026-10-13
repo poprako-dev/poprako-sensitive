@@ -15,6 +15,8 @@ use proc_macro::TokenStream;
 /// derive Debug. Field types need Debug only in configurations that show them.
 /// Optional `debug = "path"` selects a redaction callback with signature
 /// `fn(&FieldType, &mut core::fmt::Formatter<'_>) -> core::fmt::Result`.
+/// The callback receives the original borrowed field with normal Rust borrow
+/// coercions; it is never passed a preformatted string.
 /// Empty or omitted paths use default redaction. Callbacks run only without
 /// debug assertions; `display` metadata is reserved for `SensitiveDisplay`.
 #[proc_macro_derive(SensitiveDebug, attributes(sensitive))]
@@ -29,6 +31,7 @@ pub fn sensitive_debug(input: TokenStream) -> TokenStream {
 /// Visible fields use Display. Sensitive fields use `[REDACTED]` without
 /// debug assertions, or the optional `display = "path"` callback with signature
 /// `fn(&FieldType, &mut core::fmt::Formatter<'_>) -> core::fmt::Result`.
+/// The callback receives the original borrowed field, never its Display output.
 /// Empty or omitted paths use default redaction; `debug` is independent.
 #[proc_macro_derive(SensitiveDisplay, attributes(sensitive))]
 pub fn sensitive_display(input: TokenStream) -> TokenStream {

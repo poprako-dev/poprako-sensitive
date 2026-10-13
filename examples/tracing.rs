@@ -27,15 +27,19 @@ fn main() {
         .with_target(false)
         .with_ansi(false)
         .init();
+
     let credentials = Credentials {
         user_id: "user-42",
         password: "example-password",
     };
+
     let payload = b"payload-that-must-not-be-logged".repeat(4096);
+
     tracing::info!(
         debug_assertions = cfg!(debug_assertions),
         credentials = ?credentials,
         "starting tracing example",
     );
+
     submit(&credentials, &payload);
 }

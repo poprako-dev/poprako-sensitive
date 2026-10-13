@@ -128,3 +128,65 @@ fn consumer_modes_redact_without_invoking_sensitive_formatters() -> Result<(), B
 
     Ok(())
 }
+
+#[test]
+fn custom_callbacks_use_field_types_and_normal_borrow_coercions() -> Result<(), Box<dyn Error>> {
+    let directory = FixtureDirectory(std::env::temp_dir().join(format!(
+        "poprako-sensitive-signatures-{}",
+        std::process::id()
+    )));
+    fs::create_dir_all(&directory.0)?;
+
+    for (field_type, argument_type, accepted) in [
+        (quote!(Email), quote!(&Email), true),
+        (quote!(Email), quote!(&str), false),
+        (quote!(String), quote!(&str), true),
+        (quote!(Vec<u8>), quote!(&[u8]), true),
+    ] {
+        for display in [false, true] {
+            let input = quote! {
+                pub struct Invalid {
+                    #[sensitive(debug = "mask", display = "mask")]
+                    pub secret: #field_type,
+                }
+            };
+            let implementation = expand_format(input, display)?;
+            let source = quote! {
+                pub struct Email { pub local: String, pub domain: String }
+                impl ::core::fmt::Display for Email {
+                    fn fmt(&self, formatter: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                        write!(formatter, "{}@{}", self.local, self.domain)
+                    }
+                }
+                pub struct Invalid { pub secret: #field_type }
+                pub fn mask(_: #argument_type, formatter: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                    formatter.write_str("masked")
+                }
+                #implementation
+            };
+            let source_path = directory.0.join("invalid.rs");
+            fs::write(&source_path, source.to_string())?;
+            let compiled = Command::new("rustc")
+                .arg("--edition=2024")
+                .arg("--crate-type=lib")
+                .arg("--emit=metadata")
+                .arg("-Dwarnings")
+                .arg("-C")
+                .arg("debug-assertions=no")
+                .arg(&source_path)
+                .arg("-o")
+                .arg(directory.0.join("invalid.rmeta"))
+                .output()?;
+            let diagnostics = String::from_utf8_lossy(&compiled.stderr);
+            assert_eq!(
+                compiled.status.success(),
+                accepted,
+                "callback argument {argument_type} for field {field_type} (display={display}): {diagnostics}",
+            );
+            if !accepted {
+                assert!(diagnostics.contains("E0308"), "{diagnostics}");
+            }
+        }
+    }
+    Ok(())
+}
