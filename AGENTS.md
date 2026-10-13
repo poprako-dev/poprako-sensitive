@@ -4,8 +4,9 @@ The root package contains `Sensitive` and reexports. `poprako-sensitive-macro`
 contains the derive macros. Keep both packages independently packageable.
 
 - Follow plan → implement → review; preserve unrelated changes.
-- Keep Rust files below 600 lines. Do not create `mod.rs` or use `if ... else`.
-- Keep comments in English and blank lines between statements.
+- Use conventional Rust formatting with the default `cargo fmt` configuration.
+- Do not add empty `//` separators or require blank lines between statements.
+- Keep meaningful comments and public API documentation in English.
 - Do not change lint policy without explicit permission.
 - All packages inherit the workspace lint policy.
 - After Rust changes, run `just fmt-check`, `just check`, and `just clippy`,

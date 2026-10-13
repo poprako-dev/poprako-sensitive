@@ -19,7 +19,6 @@ use proc_macro::TokenStream;
 /// debug assertions; `display` metadata is reserved for `SensitiveDisplay`.
 #[proc_macro_derive(SensitiveDebug, attributes(sensitive))]
 pub fn sensitive_debug(input: TokenStream) -> TokenStream {
-    //
     debug::expand(input.into())
         .unwrap_or_else(syn::Error::into_compile_error)
         .into()

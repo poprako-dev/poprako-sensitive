@@ -97,6 +97,42 @@ This library changes formatting only. It does not encrypt, erase, or modify
 stored values or serialization. Large payloads should be excluded explicitly at
 logging call sites; size-based log exclusion is separate from redaction.
 
+## Runnable examples
+
+```sh
+cargo run --example sensitive_debug
+cargo run --example sensitive_display
+cargo run --example tracing
+```
+
+- `sensitive_debug`: bare `#[sensitive]`, compact and pretty Debug, and unchanged
+  stored values.
+- `sensitive_display`: a custom email formatter plus an empty `display = ""`
+  that selects default redaction.
+- `tracing`: `?` fields, automatically captured instrument arguments, `%` with
+  `Sensitive`, and explicit exclusion of a large payload in every configuration.
+
+The default development profile exposes the example secrets. To see redaction,
+run the same examples with `--release` (assuming the default release profile,
+which disables debug assertions):
+
+```sh
+cargo run --release --example sensitive_debug
+cargo run --release --example sensitive_display
+cargo run --release --example tracing
+```
+
+The custom Display example then prints:
+
+```text
+Contact { name: Reader, email: ***@example.com, recovery_code: [REDACTED] }
+```
+
+The Debug example replaces the password with `"[REDACTED]"`. The tracing example
+retains `user_id` and `payload_bytes`, redacts the password and access token,
+and never logs the payload body in either configuration. All values in these
+examples are synthetic.
+
 ## Development
 
 ```sh

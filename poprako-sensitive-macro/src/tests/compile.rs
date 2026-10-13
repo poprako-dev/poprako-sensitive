@@ -22,7 +22,6 @@ impl Drop for FixtureDirectory {
 
 // Expand real declarations, removing only derive helper markers afterwards.
 fn declarations() -> syn::Result<String> {
-    //
     let mut source = String::new();
 
     for input in [
@@ -30,10 +29,8 @@ fn declarations() -> syn::Result<String> {
             pub struct Credentials<'a, T: ?Sized, const N: usize>
             where T: 'a {
                 pub id: &'a str,
-
                 #[sensitive]
                 pub secret: &'a T,
-
                 pub sequence: [u8; N],
             }
         },
@@ -72,20 +69,14 @@ fn declarations() -> syn::Result<String> {
             pub struct Failing<T>(#[sensitive(debug = "fail_format", display = "fail_format")] pub T);
         },
     ] {
-        //
         let mut declaration: DeriveInput = parse2(input.clone())?;
-
         let implementation = expand(input)?;
-
         let display = match declaration.ident.to_string().as_str() {
-            "Custom" | "EmptyPaths" | "Failing" => {
-                expand_format(quote!(#declaration), true)?
-            }
+            "Custom" | "EmptyPaths" | "Failing" => expand_format(quote!(#declaration), true)?,
             _ => proc_macro2::TokenStream::new(),
         };
 
         if let Data::Struct(data) = &mut declaration.data {
-            //
             for field in &mut data.fields {
                 field
                     .attrs
@@ -93,36 +84,24 @@ fn declarations() -> syn::Result<String> {
             }
         }
 
-        source.push_str(
-            &quote!(#declaration #implementation #display).to_string(),
-        );
+        source.push_str(&quote!(#declaration #implementation #display).to_string());
     }
 
     Ok(source)
 }
 
 #[test]
-fn consumer_modes_redact_without_invoking_sensitive_formatters()
--> Result<(), Box<dyn Error>> {
-    //
+fn consumer_modes_redact_without_invoking_sensitive_formatters() -> Result<(), Box<dyn Error>> {
     let directory = FixtureDirectory(
-        std::env::temp_dir()
-            .join(format!("poprako-sensitive-compile-{}", std::process::id())),
+        std::env::temp_dir().join(format!("poprako-sensitive-compile-{}", std::process::id())),
     );
-
     fs::create_dir_all(&directory.0)?;
-
-    let source =
-        format!("{}\n{}", declarations()?, include_str!("fixture.txt"));
-
+    let source = format!("{}\n{}", declarations()?, include_str!("fixture.txt"));
     let source_path = directory.0.join("fixture.rs");
-
     fs::write(&source_path, source)?;
 
     for assertions in ["yes", "no"] {
-        //
         let executable = directory.0.join(format!("fixture-{assertions}"));
-
         let compiled = Command::new("rustc")
             .arg("--edition=2024")
             .arg("--test")
@@ -133,15 +112,12 @@ fn consumer_modes_redact_without_invoking_sensitive_formatters()
             .arg("-o")
             .arg(&executable)
             .output()?;
-
         assert!(
             compiled.status.success(),
             "{}",
             String::from_utf8_lossy(&compiled.stderr)
         );
-
         let tested = Command::new(executable).output()?;
-
         assert!(
             tested.status.success(),
             "{}\n{}",

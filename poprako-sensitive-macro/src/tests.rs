@@ -8,7 +8,6 @@ use crate::debug::expand;
 
 #[test]
 fn invalid_markers_and_unsupported_items_are_rejected() {
-    //
     for input in [
         quote!(
             struct Invalid {
@@ -86,7 +85,6 @@ fn optional_paths_and_empty_metadata_are_accepted() {
         quote!(#[sensitive(display = "crate::mask::<u32>")]),
     ] {
         let input = quote!(struct Valid { #marker secret: u32 });
-
         assert!(expand(input).is_ok());
     }
 }

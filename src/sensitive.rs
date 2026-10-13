@@ -10,10 +10,7 @@ pub struct Sensitive<T> {
     /// Original value, never formatted in the redacted configuration.
     #[cfg_attr(
         not(debug_assertions),
-        allow(
-            dead_code,
-            reason = "Redacted formatting never reads the stored value"
-        )
+        allow(dead_code, reason = "Redacted formatting never reads the stored value")
     )]
     value: T,
 }
@@ -31,12 +28,10 @@ where
 {
     // Preserve the underlying formatter, including alternate Debug formatting.
     fn fmt(&self, formatter: &mut Formatter<'_>) -> Result {
-        //
         #[cfg(debug_assertions)]
         {
             Debug::fmt(&self.value, formatter)
         }
-
         #[cfg(not(debug_assertions))]
         {
             Debug::fmt(&"[REDACTED]", formatter)
@@ -50,12 +45,10 @@ where
 {
     // Apply the same redaction policy to tracing's percent formatter.
     fn fmt(&self, formatter: &mut Formatter<'_>) -> Result {
-        //
         #[cfg(debug_assertions)]
         {
             Display::fmt(&self.value, formatter)
         }
-
         #[cfg(not(debug_assertions))]
         {
             formatter.write_str("[REDACTED]")
