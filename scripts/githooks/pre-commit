@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+
+project_root=$(git rev-parse --show-toplevel)
+cd "$project_root"
+
+sh scripts/ci-local.sh

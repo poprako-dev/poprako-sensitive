@@ -1,0 +1,36 @@
+#[cfg(not(debug_assertions))]
+use core::fmt::{Debug, Display, Formatter, Result};
+use sensitive::Sensitive;
+
+#[test]
+fn explicit_wrapper_follows_the_same_policy() {
+    let value = Sensitive::new("private-secret");
+
+    for rendered in [format!("{value:?}"), format!("{value:#?}"), format!("{value}")] {
+        assert_eq!(rendered.contains("private-secret"), cfg!(debug_assertions));
+
+        assert_eq!(rendered.contains("[REDACTED]"), !cfg!(debug_assertions));
+    }
+}
+
+#[cfg(not(debug_assertions))]
+#[test]
+fn redaction_never_invokes_native_formatters() {
+    struct Unformattable;
+
+    impl Debug for Unformattable {
+        fn fmt(&self, _: &mut Formatter<'_>) -> Result {
+            panic!("sensitive Debug must not run");
+        }
+    }
+
+    impl Display for Unformattable {
+        fn fmt(&self, _: &mut Formatter<'_>) -> Result {
+            panic!("sensitive Display must not run");
+        }
+    }
+
+    assert_eq!(format!("{:?}", Sensitive::new(Unformattable)), "\"[REDACTED]\"");
+
+    assert_eq!(format!("{}", Sensitive::new(Unformattable)), "[REDACTED]");
+}

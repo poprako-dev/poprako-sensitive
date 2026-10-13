@@ -1,0 +1,124 @@
+use core::fmt::{Debug, Display, Formatter, Result};
+
+
+pub struct Unformattable;
+
+impl Debug for Unformattable {
+    fn fmt(&self, _: &mut Formatter<'_>) -> Result {
+        panic!("sensitive Debug must not run");
+    }
+}
+
+impl Display for Unformattable {
+    fn fmt(&self, _: &mut Formatter<'_>) -> Result {
+        panic!("sensitive Display must not run");
+    }
+}
+
+#[test]
+fn visible_fields_and_nested_generic_structs_keep_debug_shape() {
+    let value = Envelope {
+        credentials: Some(Credentials {
+            id: "safe-id",
+            secret: "private-secret",
+            sequence: [1, 2],
+        }),
+    };
+
+    for rendered in [format!("{value:?}"), format!("{value:#?}")] {
+        assert!(rendered.contains("safe-id"));
+
+        assert_eq!(rendered.contains("private-secret"), cfg!(debug_assertions));
+
+        assert_eq!(rendered.contains("[REDACTED]"), !cfg!(debug_assertions));
+    }
+
+    assert_eq!(format!("{:?}", Unit), "Unit");
+
+    assert_eq!(format!("{:?}", Empty {}), "Empty");
+
+    assert_eq!(format!("{:?}", EmptyTuple()), "EmptyTuple");
+
+    assert_eq!(format!("{:?}", Raw { r#type: 1 }), "Raw { type: 1 }");
+
+    let pair = Pair(7, "private-secret");
+
+    assert_eq!(format!("{pair:?}").contains("private-secret"), cfg!(debug_assertions));
+}
+
+#[cfg(not(debug_assertions))]
+#[test]
+fn redaction_never_formats_secrets_and_needs_no_debug_bound() {
+    let value = Pair(7, Unformattable);
+
+    assert_eq!(format!("{value:?}"), "Pair(7, \"[REDACTED]\")");
+
+    struct NoDebug;
+
+    let opaque = Pair(8, NoDebug);
+
+    assert_eq!(format!("{opaque:?}"), "Pair(8, \"[REDACTED]\")");
+}
+
+#[cfg(not(debug_assertions))]
+pub fn custom_debug<T>(_: &T, formatter: &mut Formatter<'_>) -> Result {
+    match formatter.alternate() {
+        true => formatter.write_str("pretty-mask"),
+        false => formatter.write_str("debug-mask"),
+    }
+}
+
+#[cfg(not(debug_assertions))]
+pub fn custom_display<T>(_: &T, formatter: &mut Formatter<'_>) -> Result {
+    formatter.write_str("display-mask")
+}
+
+#[cfg(not(debug_assertions))]
+pub fn fail_format<T>(_: &T, _: &mut Formatter<'_>) -> Result {
+    Err(core::fmt::Error)
+}
+
+#[test]
+fn custom_callbacks_follow_consumer_configuration() {
+    let custom = Custom { secret: "private-secret" };
+
+    let debug = format!("{custom:?}");
+
+    let pretty = format!("{custom:#?}");
+
+    let display = format!("{custom}");
+
+    assert_eq!(debug.contains("private-secret"), cfg!(debug_assertions));
+
+    assert_eq!(debug.contains("debug-mask"), !cfg!(debug_assertions));
+
+    assert_eq!(pretty.contains("pretty-mask"), !cfg!(debug_assertions));
+
+    assert_eq!(display.contains("private-secret"), cfg!(debug_assertions));
+
+    assert_eq!(display.contains("display-mask"), !cfg!(debug_assertions));
+
+    let empty = EmptyPaths("private-secret");
+
+    assert_eq!(format!("{empty:?}").contains("[REDACTED]"), !cfg!(debug_assertions));
+
+    assert_eq!(format!("{empty}").contains("[REDACTED]"), !cfg!(debug_assertions));
+}
+
+#[cfg(not(debug_assertions))]
+#[test]
+fn custom_callbacks_need_no_native_traits_and_propagate_errors() {
+    struct Opaque;
+
+    let value = Custom { secret: Opaque };
+
+    assert_eq!(format!("{value:?}"), "Custom { secret: debug-mask }");
+
+    assert_eq!(format!("{value}"), "Custom { secret: display-mask }");
+
+    let failed = Failing(Opaque);
+
+    assert!(core::fmt::write(&mut String::new(), format_args!("{failed:?}")).is_err());
+
+    assert!(core::fmt::write(&mut String::new(), format_args!("{failed}")).is_err());
+}
